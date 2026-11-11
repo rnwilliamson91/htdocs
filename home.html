@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiber Classification Database</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, sans-serif; }
+    body { margin: 0; background: #f4f6f8; color: #17202a; }
+    header { padding: 2rem 5%; background: #257caf; color: white; }
+    main { padding: 2rem 5%; }
+    .status { margin-bottom: 1rem; }
+    .error { color: #b42318; }
+    .table-wrap { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .8rem 1rem; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
+    th { background: #e8f1f7; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fiber Classification Database</h1>
+    <p>Records loaded from MySQL through MAMP.</p>
+  </header>
+  <main>
+    <p id="status" class="status">Loading records...</p>
+    <div class="table-wrap">
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </main>
+  <script>
+    const status = document.getElementById('status');
+    const head = document.getElementById('table-head');
+    const body = document.getElementById('table-body');
+
+    function formatLabel(key) {
+      return key.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase());
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[character]));
+    }
+
+    async function loadFibers() {
+      try {
+        const response = await fetch('api.php');
+        const payload = await response.json();
+        if (!response.ok || !Array.isArray(payload)) {
+          throw new Error(payload.error || 'Unable to load records.');
+        }
+
+        if (payload.length === 0) {
+          status.textContent = 'No fiber records found.';
+          return;
+        }
+
+        const columns = Object.keys(payload[0]);
+        head.innerHTML = `<tr>${columns.map(column => `<th>${escapeHtml(formatLabel(column))}</th>`).join('')}</tr>`;
+        body.innerHTML = payload.map(record =>
+          `<tr>${columns.map(column => `<td>${escapeHtml(record[column])}</td>`).join('')}</tr>`
+        ).join('');
+        status.textContent = `${payload.length} record${payload.length === 1 ? '' : 's'} loaded from MySQL.`;
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add('error');
+      }
+    }
+
+    loadFibers();
+  </script>
+</body>
+</html>
